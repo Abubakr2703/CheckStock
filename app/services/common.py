@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from models import Operation
+from app.models import Operation
 
 
 class DomainError(Exception):

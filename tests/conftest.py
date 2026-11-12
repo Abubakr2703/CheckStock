@@ -14,9 +14,9 @@ os.environ["AUTO_SEED"] = "false"
 import pytest  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 
-from db import Base, SessionLocal, engine  # noqa: E402
-from models import Product, Store, Warehouse  # noqa: E402
-from seed import seed_demo  # noqa: E402
+from app.db import Base, SessionLocal, engine  # noqa: E402
+from app.models import Product, Store, Warehouse  # noqa: E402
+from app.seed import seed_demo  # noqa: E402
 
 
 @pytest.fixture()

@@ -4,14 +4,14 @@ from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from db import get_db
-from models import OpKind, Operation, OpStatus
-from services.catalog import get_default_store, list_products
-from services.common import DomainError
-from services.receipts import add_receipt
-from services.stock import compute_stock
-from services.transfers import create_transfer, receive_transfer
-from services.warehouses import list_warehouses
+from app.db import get_db
+from app.models import OpKind, Operation, OpStatus
+from app.services.catalog import get_default_store, list_products
+from app.services.common import DomainError
+from app.services.receipts import add_receipt
+from app.services.stock import compute_stock
+from app.services.transfers import create_transfer, receive_transfer
+from app.services.warehouses import list_warehouses
 
 from .common import page_key, redirect, templates
 

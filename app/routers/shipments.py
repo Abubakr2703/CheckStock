@@ -4,19 +4,19 @@ from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from db import get_db
-from models import OpKind, Operation, OpStatus
-from services.catalog import get_default_store, list_products
-from services.common import DomainError
-from services.fbo import receive_fbo, ship_fbo
-from services.fbs import (
+from app.db import get_db
+from app.models import OpKind, Operation, OpStatus
+from app.services.catalog import get_default_store, list_products
+from app.services.common import DomainError
+from app.services.fbo import receive_fbo, ship_fbo
+from app.services.fbs import (
     cancel_fbs_reserve,
     deliver_fbs_ship,
     reserve_fbs,
     ship_fbs_reserve,
 )
-from services.stock import compute_stock
-from services.warehouses import list_warehouses
+from app.services.stock import compute_stock
+from app.services.warehouses import list_warehouses
 
 from .common import page_key, redirect, templates
 

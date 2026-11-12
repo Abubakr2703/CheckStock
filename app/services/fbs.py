@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import EventType, Operation, OpKind, OpStatus
-from models.base import utcnow
+from app.models import EventType, Operation, OpKind, OpStatus
+from app.models.base import utcnow
 
 from .common import DomainError, clean_key, existing_operation, finish_operation
 from .stock import compute_stock

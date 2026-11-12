@@ -6,11 +6,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
-from config import APP_TITLE, AUTO_SEED, BASE_DIR
-from db import Base, SessionLocal, engine
-from models import Store
-from routers import routers
-from seed import seed_demo
+from app.config import APP_TITLE, AUTO_SEED, BASE_DIR
+from app.db import Base, SessionLocal, engine
+from app.models import Store
+from app.routers import routers
+from app.seed import seed_demo
 
 
 @asynccontextmanager

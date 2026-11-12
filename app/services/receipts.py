@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from models import EventType, Operation, OpKind, OpStatus
-from models.base import utcnow
+from app.models import EventType, Operation, OpKind, OpStatus
+from app.models.base import utcnow
 
 from .common import clean_key, existing_operation, finish_operation
 from .validation import (

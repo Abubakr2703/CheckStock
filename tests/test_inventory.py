@@ -4,10 +4,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
-from db import SessionLocal
-from main import app
-from models import Operation, OperationEvent
-from services import (
+from app.db import SessionLocal
+from app.main import app
+from app.models import Operation, OperationEvent
+from app.services import (
     DomainError,
     InsufficientStock,
     add_receipt,

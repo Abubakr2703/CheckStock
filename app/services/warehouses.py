@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from models import Warehouse
-from models.base import utcnow
+from app.models import Warehouse
+from app.models.base import utcnow
 
 from .common import DomainError
 from .validation import get_warehouse

@@ -3,11 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy.orm import Session
 
-from db import get_db
-from services.catalog import get_default_store, list_products
-from services.common import DomainError
-from services.stock import compute_stock
-from services.warehouses import (
+from app.db import get_db
+from app.services.catalog import get_default_store, list_products
+from app.services.common import DomainError
+from app.services.stock import compute_stock
+from app.services.warehouses import (
     archive_warehouse,
     create_warehouse,
     list_warehouses,
