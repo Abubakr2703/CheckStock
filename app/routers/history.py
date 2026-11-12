@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
-from db import get_db
-from services.catalog import get_default_store, list_events, list_products
-from services.warehouses import list_warehouses
+from app.db import get_db
+from app.services.catalog import get_default_store, list_events, list_products
+from app.services.warehouses import list_warehouses
 
 from .common import EVENT_BADGES, EVENT_LABELS, templates
 

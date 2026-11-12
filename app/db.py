@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from config import DATABASE_URL
+from app.config import DATABASE_URL
 
 
 class Base(DeclarativeBase):

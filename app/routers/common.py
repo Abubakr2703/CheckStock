@@ -7,8 +7,8 @@ from uuid import uuid4
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from config import BASE_DIR
-from models import EventType
+from app.config import BASE_DIR
+from app.models import EventType
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 

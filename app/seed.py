@@ -5,9 +5,9 @@ import argparse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from db import Base, SessionLocal, engine
-from models import Product, Store, Warehouse
-from services.receipts import add_receipt
+from app.db import Base, SessionLocal, engine
+from app.models import Product, Store, Warehouse
+from app.services.receipts import add_receipt
 
 STORE_NAME = "Демо-магазин"
 

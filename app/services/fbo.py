@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from models import EventType, Operation, OpKind, OpStatus
-from models.base import utcnow
+from app.models import EventType, Operation, OpKind, OpStatus
+from app.models.base import utcnow
 
 from .common import DomainError, clean_key, existing_operation, finish_operation
 from .validation import (
@@ -17,12 +17,11 @@ from .validation import (
 )
 
 
-def create_transfer(
+def ship_fbo(
     db: Session,
     store_id: int,
     product_id: int,
-    from_warehouse_id: int,
-    to_warehouse_id: int,
+    warehouse_id: int,
     quantity: int,
     note: str | None,
     idempotency_key: str,
@@ -32,23 +31,18 @@ def create_transfer(
         return existing, False
 
     quantity = require_positive(quantity)
-    if from_warehouse_id == to_warehouse_id:
-        raise DomainError("Склад-отправитель и склад-получатель должны различаться.")
-
     product = get_product(db, store_id, product_id)
-    source = get_warehouse(db, store_id, from_warehouse_id, allow_archived=True)
-    destination = get_warehouse(db, store_id, to_warehouse_id)
+    warehouse = get_warehouse(db, store_id, warehouse_id)
     lock_product(db, product.id)
-    require_stock(db, store_id, product, source, quantity)
+    require_stock(db, store_id, product, warehouse, quantity)
 
     op = Operation(
         store_id=store_id,
         product_id=product.id,
-        kind=OpKind.TRANSFER,
+        kind=OpKind.FBO_SHIP,
         status=OpStatus.IN_TRANSIT,
         quantity=quantity,
-        from_warehouse_id=source.id,
-        to_warehouse_id=destination.id,
+        from_warehouse_id=warehouse.id,
         idempotency_key=key,
         note=note,
     )
@@ -57,17 +51,17 @@ def create_transfer(
     add_event(
         db,
         op,
-        EventType.TRANSFER_SENT,
+        EventType.FBO_SENT,
         quantity,
-        from_wh=source,
-        to_wh=destination,
+        from_wh=warehouse,
+        to_label="Маркетплейс (FBO)",
         note=note,
         product=product,
     )
     return finish_operation(db, op, key)
 
 
-def receive_transfer(
+def receive_fbo(
     db: Session,
     store_id: int,
     operation_id: int,
@@ -79,11 +73,11 @@ def receive_transfer(
     if existing := existing_operation(db, key):
         return existing, False
 
-    op = get_operation(db, store_id, operation_id, OpKind.TRANSFER, for_update=True)
+    op = get_operation(db, store_id, operation_id, OpKind.FBO_SHIP, for_update=True)
     if op.status == OpStatus.COMPLETED:
         return op, False
     if op.status != OpStatus.IN_TRANSIT:
-        raise DomainError("Эту операцию нельзя подтвердить: она не в пути.")
+        raise DomainError("Эту поставку нельзя подтвердить: она не в пути.")
 
     if received_quantity is None or received_quantity < 0:
         raise DomainError("Принятое количество не может быть отрицательным.")
@@ -99,10 +93,10 @@ def receive_transfer(
     add_event(
         db,
         op,
-        EventType.TRANSFER_RECEIVED,
+        EventType.FBO_RECEIVED,
         received_quantity,
         from_wh=op.from_warehouse,
-        to_wh=op.to_warehouse,
+        to_label="Маркетплейс (FBO)",
         note=note,
     )
     shortage = op.quantity - received_quantity
@@ -110,10 +104,10 @@ def receive_transfer(
         add_event(
             db,
             op,
-            EventType.TRANSFER_SHORTAGE,
+            EventType.FBO_SHORTAGE,
             shortage,
             from_wh=op.from_warehouse,
-            to_wh=op.to_warehouse,
+            to_label="Маркетплейс (FBO)",
             note=(
                 f"Отправлено {op.quantity} ед., принято {received_quantity} ед. "
                 f"Недостача {shortage} ед. списана."

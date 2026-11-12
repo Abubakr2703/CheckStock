@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import Operation, OperationEvent, Product, Warehouse
+from app.models import Operation, OperationEvent, Product, Warehouse
 
 from .common import DomainError, InsufficientStock
 from .stock import compute_stock

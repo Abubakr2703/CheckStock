@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import OpKind, Operation, OpStatus
+from app.models import OpKind, Operation, OpStatus
 
 
 @dataclass

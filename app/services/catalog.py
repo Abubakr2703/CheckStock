@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import OperationEvent, Product, Store
+from app.models import OperationEvent, Product, Store
 
 from .common import DomainError
 
@@ -11,14 +11,18 @@ from .common import DomainError
 def get_default_store(db: Session) -> Store:
     store = db.scalar(select(Store).order_by(Store.id))
     if store is None:
-        raise DomainError("Магазин не найден. Загрузите демо-данные: python -m seed")
+        raise DomainError(
+            "Магазин не найден. Загрузите демо-данные: python -m app.seed"
+        )
     return store
 
 
 def list_products(db: Session, store_id: int) -> list[Product]:
     return list(
         db.scalars(
-            select(Product).where(Product.store_id == store_id).order_by(Product.sku)
+            select(Product)
+            .where(Product.store_id == store_id)
+            .order_by(Product.sku)
         ).all()
     )
 
@@ -42,5 +46,7 @@ def list_events(
         )
     if event_type:
         query = query.where(OperationEvent.event_type == event_type)
-    query = query.order_by(OperationEvent.created_at.desc(), OperationEvent.id.desc())
+    query = query.order_by(
+        OperationEvent.created_at.desc(), OperationEvent.id.desc()
+    )
     return list(db.scalars(query.limit(limit)).all())

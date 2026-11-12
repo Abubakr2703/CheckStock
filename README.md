@@ -31,8 +31,8 @@ python -m venv .venv
 # source .venv/bin/activate
 
 pip install -r requirements.txt
-python -m seed --reset
-uvicorn main:app --reload
+python -m app.seed --reset
+uvicorn app.main:app --reload
 ```
 
 Приложение: <http://127.0.0.1:8000>. Файл БД — `checkstock.db` в корне проекта.
@@ -60,7 +60,7 @@ pytest -q
 | SKU-102 | Контейнер | 5 | 0 |
 | SKU-103 | Корзина | 0 | 4 |
 
-Итого 25 единиц. Пересоздать данные: `python -m seed --reset`.
+Итого 25 единиц. Пересоздать данные: `python -m app.seed --reset`.
 
 ---
 
@@ -147,42 +147,45 @@ pytest -q
 
 ```text
 .
-├── main.py                 # FastAPI app, lifespan, подключение роутеров
-├── config.py               # DATABASE_URL, AUTO_SEED
-├── db.py                   # engine, SessionLocal, Base
-├── seed.py                 # демо-данные из задания
-├── models/                 # по файлу на сущность
-│   ├── base.py             # utcnow
-│   ├── enums.py            # OpKind, OpStatus, EventType
-│   ├── store.py
-│   ├── warehouse.py
-│   ├── product.py
-│   ├── operation.py        # операция и её состояние
-│   └── event.py            # аудит-лог
-├── services/               # по файлу на бизнес-сценарий
-│   ├── common.py           # DomainError, идемпотентность
-│   ├── validation.py       # общие проверки, блокировки, события
-│   ├── stock.py            # расчёт остатков и «где товар»
-│   ├── receipts.py         # приход
-│   ├── transfers.py        # перемещение и приёмка
-│   ├── fbs.py              # резерв, отправка, отмена, доставка
-│   ├── fbo.py              # отправка и приёмка на маркетплейс
-│   ├── warehouses.py       # CRUD/архивирование складов
-│   └── catalog.py          # справочники и история
-├── routers/                # по файлу на экран/API
-│   ├── common.py           # шаблоны, flash-сообщения, фильтры
-│   ├── dashboard.py
-│   ├── warehouses.py
-│   ├── movements.py
-│   ├── shipments.py
-│   ├── history.py
-│   └── api.py
-├── templates/              # Jinja2
-├── static/                 # CSS/JS без сборки
+├── app/                    # пакет приложения
+│   ├── __init__.py
+│   ├── main.py             # FastAPI app, lifespan, подключение роутеров
+│   ├── config.py           # DATABASE_URL, AUTO_SEED
+│   ├── db.py               # engine, SessionLocal, Base
+│   ├── seed.py             # демо-данные из задания
+│   ├── models/             # по файлу на сущность
+│   │   ├── base.py         # utcnow
+│   │   ├── enums.py        # OpKind, OpStatus, EventType
+│   │   ├── store.py
+│   │   ├── warehouse.py
+│   │   ├── product.py
+│   │   ├── operation.py    # операция и её состояние
+│   │   └── event.py        # аудит-лог
+│   ├── services/           # по файлу на бизнес-сценарий
+│   │   ├── common.py       # DomainError, идемпотентность
+│   │   ├── validation.py   # общие проверки, блокировки, события
+│   │   ├── stock.py        # расчёт остатков и «где товар»
+│   │   ├── receipts.py     # приход
+│   │   ├── transfers.py    # перемещение и приёмка
+│   │   ├── fbs.py          # резерв, отправка, отмена, доставка
+│   │   ├── fbo.py          # отправка и приёмка на маркетплейс
+│   │   ├── warehouses.py   # CRUD/архивирование складов
+│   │   └── catalog.py      # справочники и история
+│   ├── routers/            # по файлу на экран/API
+│   │   ├── common.py       # шаблоны, flash-сообщения, фильтры
+│   │   ├── dashboard.py
+│   │   ├── warehouses.py
+│   │   ├── movements.py
+│   │   ├── shipments.py
+│   │   ├── history.py
+│   │   └── api.py
+│   ├── templates/          # Jinja2
+│   └── static/             # CSS/JS без сборки
 ├── tests/
 ├── Dockerfile
 ├── docker-compose.yml
-└── requirements.txt
+├── requirements.txt
+└── checkstock.db           # создаётся при локальном запуске
 ```
 
 Слои разделены: роутеры занимаются HTTP и шаблонами, сервисы — бизнес-правилами,

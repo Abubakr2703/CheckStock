@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from db import get_db
-from services.catalog import get_default_store, list_products
-from services.stock import compute_stock
-from services.warehouses import list_warehouses
+from app.db import get_db
+from app.services.catalog import get_default_store, list_products
+from app.services.stock import compute_stock
+from app.services.warehouses import list_warehouses
 
 router = APIRouter()
 
