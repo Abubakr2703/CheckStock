@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Остатки{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Экран остатков</p>
+    <h1>Где сейчас товар</h1>
+    <p class="lead">
+      Один артикул может лежать на нескольких складах фулфилмента, быть
+      зарезервированным под FBS или ехать на маркетплейс по FBO.
+    </p>
+  </div>
+  <div class="head-actions">
+    <a class="btn" href="/movements">Оформить движение</a>
+    <a class="btn btn-ghost" href="/shipments">Отправки</a>
+  </div>
+</section>
+
+<section class="stats" aria-label="Сводка по остаткам">
+  <div class="stat">
+    <span class="stat-label">На складах ФФ</span>
+    <strong class="stat-value">{{ stats.on_ff }}</strong>
+    <span class="stat-hint">физический остаток</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">В пути</span>
+    <strong class="stat-value">{{ stats.in_transit }}</strong>
+    <span class="stat-hint">между ФФ и в FBO</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">На маркетплейсе</span>
+    <strong class="stat-value">{{ stats.marketplace }}</strong>
+    <span class="stat-hint">FBO принято</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">У клиента</span>
+    <strong class="stat-value">{{ stats.customer }}</strong>
+    <span class="stat-hint">FBS в доставке</span>
+  </div>
+  <div class="stat stat-accent">
+    <span class="stat-label">Всего в системе</span>
+    <strong class="stat-value">{{ stats.total }}</strong>
+    <span class="stat-hint">без учёта доставленного</span>
+  </div>
+</section>
+
+{% if stats.lost or stats.delivered %}
+<p class="muted-note">
+  Дополнительно:
+  {% if stats.lost %}списано из-за недостач — {{ stats.lost }} ед.{% endif %}
+  {% if stats.delivered %}{% if stats.lost %} · {% endif %}доставлено клиентам — {{ stats.delivered }} ед.{% endif %}
+</p>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Остатки по артикулам и ФФ</h2>
+      <p class="card-sub">Физически · резерв FBS · доступно к операциям</p>
+    </div>
+    <span class="badge badge-soft">1 магазин · {{ warehouses|selectattr('is_archived', 'equalto', false)|list|length }} активных ФФ</span>
+  </div>
+
+  {% if products %}
+  <div class="table-wrap">
+    <table class="table stock-table">
+      <thead>
+        <tr>
+          <th>Склад</th>
+          <th class="num">Физически</th>
+          <th class="num">Резерв FBS</th>
+          <th class="num">Доступно</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in product_rows %}
+        <tr class="product-row">
+          <td colspan="4">
+            <span class="sku">{{ row.product.sku }}</span>
+            <strong>{{ row.product.name }}</strong>
+          </td>
+          <td class="num product-total">{{ row.total }} ед. в системе</td>
+        </tr>
+        {% for item in row.warehouses %}
+        <tr>
+          <td>
+            {{ item.warehouse.name }}
+            {% if item.warehouse.is_archived %}<span class="badge badge-archive">архив</span>{% endif %}
+          </td>
+          <td class="num">{{ item.physical }}</td>
+          <td class="num {{ 'muted' if not item.reserved }}">
+            {% if item.reserved %}<span class="badge badge-hold">{{ item.reserved }}</span>{% else %}0{% endif %}
+          </td>
+          <td class="num strong">{{ item.available }}</td>
+          <td>
+            {% if item.warehouse.is_archived %}
+              <span class="status status-archive">склад удалён</span>
+            {% elif item.available > 0 %}
+              <span class="status status-ok">доступно</span>
+            {% elif item.reserved > 0 %}
+              <span class="status status-hold">всё в резерве</span>
+            {% else %}
+              <span class="status status-empty">пусто</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Товары не найдены. Загрузите демо-данные: <code>python -m app.seed --reset</code>.</div>
+  {% endif %}
+</section>
+
+<section class="section-head">
+  <div>
+    <h2>Товар вне складов</h2>
+    <p class="card-sub">В пути между ФФ, на маркетплейсе по FBO и у клиента по FBS</p>
+  </div>
+</section>
+
+<div class="outside-grid">
+  <section class="card outside-card">
+    <div class="card-head compact">
+      <h3>В пути между ФФ</h3>
+      <span class="badge badge-info">{{ transfers|sum(attribute='quantity') }} ед.</span>
+    </div>
+    {% if transfers %}
+      {% for item in transfers %}
+      <div class="outside-item">
+        <div>
+          <span class="outside-product">{{ item.product }}</span>
+          <span class="outside-route">{{ item.route }}</span>
+          <span class="outside-date">{{ item.created_at|dt }}</span>
+        </div>
+        <strong>{{ item.quantity }}</strong>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty small">Нет перемещений в пути.</p>
+    {% endif %}
+  </section>
+
+  <section class="card outside-card">
+    <div class="card-head compact">
+      <h3>FBO в пути</h3>
+      <span class="badge badge-info">{{ fbo_transit|sum(attribute='quantity') }} ед.</span>
+    </div>
+    {% if fbo_transit %}
+      {% for item in fbo_transit %}
+      <div class="outside-item">
+        <div>
+          <span class="outside-product">{{ item.product }}</span>
+          <span class="outside-route">{{ item.route }}</span>
+          <span class="outside-date">{{ item.created_at|dt }}</span>
+        </div>
+        <strong>{{ item.quantity }}</strong>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty small">Нет поставок в пути.</p>
+    {% endif %}
+  </section>
+
+  <section class="card outside-card">
+    <div class="card-head compact">
+      <h3>FBO на складе маркетплейса</h3>
+      <span class="badge badge-info">{{ fbo_mp|sum(attribute='quantity') }} ед.</span>
+    </div>
+    {% if fbo_mp %}
+      {% for item in fbo_mp %}
+      <div class="outside-item">
+        <div>
+          <span class="outside-product">{{ item.product.sku }} · {{ item.product.name }}</span>
+          <span class="outside-route">Принято маркетплейсом</span>
+        </div>
+        <strong>{{ item.quantity }}</strong>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty small">На маркетплейсе пока нет принятого товара.</p>
+    {% endif %}
+  </section>
+
+  <section class="card outside-card">
+    <div class="card-head compact">
+      <h3>Клиенту по FBS</h3>
+      <span class="badge badge-info">{{ fbs_customer|sum(attribute='quantity') }} ед.</span>
+    </div>
+    {% if fbs_customer %}
+      {% for item in fbs_customer %}
+      <div class="outside-item">
+        <div>
+          <span class="outside-product">{{ item.product }}</span>
+          <span class="outside-route">{{ item.route }}</span>
+          <span class="outside-date">{{ item.created_at|dt }}</span>
+        </div>
+        <strong>{{ item.quantity }}</strong>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty small">Нет заказов в доставке.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

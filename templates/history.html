@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}История{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">История операций</p>
+    <h1>Что и куда переместилось</h1>
+    <p class="lead">
+      Неизменяемый журнал: товар, количество, откуда и куда, дата и статус.
+      Подписи сохраняются снимком, поэтому переименование склада не переписывает историю.
+    </p>
+  </div>
+</section>
+
+<section class="card">
+  <form class="filters" method="get" action="/history">
+    <label class="field">
+      <span>Товар</span>
+      <select name="product_id">
+        <option value="">Все товары</option>
+        {% for product in products %}
+        <option value="{{ product.id }}" {{ 'selected' if selected_product == product.id }}>{{ product.sku }} · {{ product.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="field">
+      <span>Склад</span>
+      <select name="warehouse_id">
+        <option value="">Все склады</option>
+        {% for warehouse in warehouses %}
+        <option value="{{ warehouse.id }}" {{ 'selected' if selected_warehouse == warehouse.id }}>{{ warehouse.name }}{% if warehouse.is_archived %} (архив){% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="field">
+      <span>Тип операции</span>
+      <select name="event_type">
+        <option value="">Все операции</option>
+        {% for value, label in event_types.items() %}
+        <option value="{{ value }}" {{ 'selected' if selected_type == value }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="filter-actions">
+      <button class="btn" type="submit">Показать</button>
+      <a class="btn btn-ghost" href="/history">Сбросить</a>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Журнал</h2>
+      <p class="card-sub">Последние {{ rows|length }} событий</p>
+    </div>
+    <span class="badge badge-soft">аудит</span>
+  </div>
+
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="table history-table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Операция</th>
+          <th>Товар</th>
+          <th class="num">Кол-во</th>
+          <th>Направление</th>
+          <th>Комментарий</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="muted nowrap">{{ row.event.created_at|dt }}</td>
+          <td><span class="badge badge-{{ row.badge }}">{{ row.label }}</span></td>
+          <td>{{ row.event.product_label }}</td>
+          <td class="num strong nowrap">
+            {% if row.badge == 'in' %}+{% elif row.badge == 'out' or row.badge == 'danger' %}−{% endif %}{{ row.event.quantity }}
+          </td>
+          <td>{{ row.direction }}</td>
+          <td class="muted">{{ row.event.note or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">По выбранным фильтрам операций нет.</div>
+  {% endif %}
+</section>
+{% endblock %}

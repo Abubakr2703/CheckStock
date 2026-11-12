@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Склады{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Склады и движения</p>
+    <h1>Склады фулфилмента</h1>
+    <p class="lead">
+      Добавляйте и переименовывайте ФФ. Удаление — мягкое: остатки и история
+      сохраняются, товар остаётся видимым в архиве.
+    </p>
+  </div>
+</section>
+
+<section class="card form-card">
+  <div class="card-head">
+    <div>
+      <h2>Добавить склад</h2>
+      <p class="card-sub">Название должно быть уникальным среди активных складов</p>
+    </div>
+  </div>
+  <form class="inline-form" method="post" action="/warehouses">
+    <label class="field grow">
+      <span>Название</span>
+      <input type="text" name="name" maxlength="120" required placeholder="Например, Восток">
+    </label>
+    <button class="btn" type="submit">Добавить склад</button>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Активные склады</h2>
+      <p class="card-sub">Сюда можно принимать товар и оформлять перемещения</p>
+    </div>
+    <span class="badge badge-soft">{{ active_rows|length }} шт.</span>
+  </div>
+
+  {% if active_rows %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Склад</th>
+          <th class="num">SKU с остатком</th>
+          <th class="num">Физически</th>
+          <th class="num">Резерв FBS</th>
+          <th class="num">Доступно</th>
+          <th class="actions-col">Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in active_rows %}
+        <tr>
+          <td>
+            <strong>{{ row.warehouse.name }}</strong>
+            <div class="muted small">создан {{ row.warehouse.created_at|dt }}</div>
+          </td>
+          <td class="num">{{ row.sku_count }}</td>
+          <td class="num">{{ row.physical }}</td>
+          <td class="num">{{ row.reserved }}</td>
+          <td class="num strong">{{ row.available }}</td>
+          <td>
+            <div class="row-actions">
+              <form class="inline-form tight" method="post" action="/warehouses/{{ row.warehouse.id }}/rename">
+                <input class="input-sm" type="text" name="name" value="{{ row.warehouse.name }}" maxlength="120" required aria-label="Новое название склада">
+                <button class="btn btn-sm btn-ghost" type="submit">Переименовать</button>
+              </form>
+              <form method="post" action="/warehouses/{{ row.warehouse.id }}/archive"
+                    data-confirm="{% if row.physical %}На складе «{{ row.warehouse.name }}» останется {{ row.physical }} ед. Остатки и история сохранятся, склад уйдёт в архив. Продолжить?{% else %}Удалить склад «{{ row.warehouse.name }}»?{% endif %}">
+                <button class="btn btn-sm btn-danger-ghost" type="submit">Удалить</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Нет активных складов. Добавьте хотя бы один.</div>
+  {% endif %}
+</section>
+
+{% if archived_rows %}
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Архив</h2>
+      <p class="card-sub">Удалённые склады: остатки сохранены и видны на экране остатков</p>
+    </div>
+    <span class="badge badge-archive">{{ archived_rows|length }} шт.</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Склад</th>
+          <th class="num">SKU с остатком</th>
+          <th class="num">Физически</th>
+          <th class="num">Резерв FBS</th>
+          <th class="num">Доступно</th>
+          <th>Удалён</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in archived_rows %}
+        <tr>
+          <td>
+            <strong>{{ row.warehouse.name }}</strong>
+            <span class="badge badge-archive">архив</span>
+          </td>
+          <td class="num">{{ row.sku_count }}</td>
+          <td class="num">{{ row.physical }}</td>
+          <td class="num">{{ row.reserved }}</td>
+          <td class="num strong">{{ row.available }}</td>
+          <td class="muted">{{ row.warehouse.archived_at|dt }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">
+    Остаток с архивного склада можно переместить на активный: выберите его как
+    склад-отправитель на странице <a href="/movements">«Движения»</a>.
+  </p>
+</section>
+{% endif %}
+
+<section class="info-panel">
+  <h3>Почему удаление мягкое</h3>
+  <p>
+    Склад — это место, где физически лежит товар. Если удалить его вместе с
+    остатком, баланс перестанет сходиться, а история операций потеряет адрес.
+    Поэтому запись помечается архивной: новые приходы и резервы запрещены,
+    но остаток и все движения сохраняются.
+  </p>
+</section>
+{% endblock %}

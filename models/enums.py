@@ -1,0 +1,37 @@
+"""Справочники состояний операций.
+
+Храним строки, а не SQL-enum: так проще мигрировать и одинаково работает
+в PostgreSQL и SQLite.
+"""
+
+
+class OpKind:
+    RECEIPT = "RECEIPT"
+    TRANSFER = "TRANSFER"
+    FBS_RESERVE = "FBS_RESERVE"
+    FBS_SHIP = "FBS_SHIP"
+    FBO_SHIP = "FBO_SHIP"
+
+
+class OpStatus:
+    COMPLETED = "COMPLETED"
+    IN_TRANSIT = "IN_TRANSIT"
+    ACTIVE = "ACTIVE"
+    FULFILLED = "FULFILLED"
+    CANCELLED = "CANCELLED"
+    SHIPPED = "SHIPPED"
+    DELIVERED = "DELIVERED"
+
+
+class EventType:
+    RECEIPT = "RECEIPT"
+    TRANSFER_SENT = "TRANSFER_SENT"
+    TRANSFER_RECEIVED = "TRANSFER_RECEIVED"
+    TRANSFER_SHORTAGE = "TRANSFER_SHORTAGE"
+    FBS_RESERVED = "FBS_RESERVED"
+    FBS_CANCELLED = "FBS_CANCELLED"
+    FBS_SHIPPED = "FBS_SHIPPED"
+    FBS_DELIVERED = "FBS_DELIVERED"
+    FBO_SENT = "FBO_SENT"
+    FBO_RECEIVED = "FBO_RECEIVED"
+    FBO_SHORTAGE = "FBO_SHORTAGE"

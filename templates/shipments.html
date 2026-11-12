@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Отправки{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Отправки FBS и FBO</p>
+    <h1>Резервы, клиенты и маркетплейс</h1>
+    <p class="lead">
+      Резерв FBS блокирует товар на ФФ до отправки заказа или отмены.
+      FBO покидает склад и числится в пути, пока маркетплейс не подтвердит приёмку.
+    </p>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="card form-card">
+    <div class="card-head">
+      <div>
+        <h2>Резерв под FBS</h2>
+        <p class="card-sub">Блокирует доступный остаток, но не списывает его</p>
+      </div>
+    </div>
+    <form method="post" action="/shipments/fbs/reserve" class="stack">
+      <input type="hidden" name="idempotency_key" value="reserve-{{ key }}">
+      <label class="field">
+        <span>Товар</span>
+        <select name="product_id" required>
+          {% for product in products %}
+          <option value="{{ product.id }}">{{ product.sku }} · {{ product.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="grid-2 tight-grid">
+        <label class="field">
+          <span>Склад</span>
+          <select name="warehouse_id" required>
+            {% for warehouse in active_warehouses %}
+            <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Количество</span>
+          <input type="number" name="quantity" min="1" step="1" value="1" required>
+        </label>
+      </div>
+      <label class="field">
+        <span>Комментарий <em>необязательно</em></span>
+        <input type="text" name="note" maxlength="500" placeholder="Номер заказа или комментарий">
+      </label>
+      <button class="btn" type="submit">Создать резерв</button>
+    </form>
+  </section>
+
+  <section class="card form-card">
+    <div class="card-head">
+      <div>
+        <h2>Отправка FBO</h2>
+        <p class="card-sub">Списание с ФФ и «в пути» до приёмки маркетплейсом</p>
+      </div>
+    </div>
+    <form method="post" action="/shipments/fbo/ship" class="stack">
+      <input type="hidden" name="idempotency_key" value="fbo-{{ key }}">
+      <label class="field">
+        <span>Товар</span>
+        <select name="product_id" required>
+          {% for product in products %}
+          <option value="{{ product.id }}">{{ product.sku }} · {{ product.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="grid-2 tight-grid">
+        <label class="field">
+          <span>Склад</span>
+          <select name="warehouse_id" required>
+            {% for warehouse in active_warehouses %}
+            <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Количество</span>
+          <input type="number" name="quantity" min="1" step="1" value="1" required>
+        </label>
+      </div>
+      <label class="field">
+        <span>Комментарий <em>необязательно</em></span>
+        <input type="text" name="note" maxlength="500" placeholder="Номер поставки">
+      </label>
+      <button class="btn" type="submit">Отправить на маркетплейс</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Активные резервы FBS</h2>
+      <p class="card-sub">Товар заблокирован на складе и недоступен для других операций</p>
+    </div>
+    <span class="badge badge-hold">{{ reserves|length }} шт.</span>
+  </div>
+  {% if reserves %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Товар</th>
+          <th>Склад</th>
+          <th class="num">В резерве</th>
+          <th>Создан</th>
+          <th class="actions-col">Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in reserves %}
+        <tr>
+          <td><span class="sku">{{ item.product.sku }}</span> {{ item.product.name }}</td>
+          <td>{{ item.warehouse.name }}</td>
+          <td class="num strong">{{ item.op.quantity }}</td>
+          <td class="muted">{{ item.op.created_at|dt }}</td>
+          <td>
+            <div class="row-actions">
+              <form method="post" action="/shipments/fbs/{{ item.op.id }}/ship"
+                    data-confirm="Отправить заказ клиенту? {{ item.op.quantity }} ед. спишутся со склада «{{ item.warehouse.name }}».">
+                <input type="hidden" name="idempotency_key" value="ship-{{ item.op.id }}-{{ key }}">
+                <button class="btn btn-sm" type="submit">Отправить клиенту</button>
+              </form>
+              <form method="post" action="/shipments/fbs/{{ item.op.id }}/cancel"
+                    data-confirm="Отменить резерв и вернуть {{ item.op.quantity }} ед. в доступный остаток?">
+                <button class="btn btn-sm btn-danger-ghost" type="submit">Отменить</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Нет активных резервов.</div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>FBS в доставке</h2>
+      <p class="card-sub">Товар уже списан со склада и едет к клиенту</p>
+    </div>
+    <span class="badge badge-info">{{ shipped|length }} шт.</span>
+  </div>
+  {% if shipped %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Товар</th>
+          <th>Склад</th>
+          <th class="num">Количество</th>
+          <th>Отправлен</th>
+          <th class="actions-col">Действие</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in shipped %}
+        <tr>
+          <td><span class="sku">{{ item.product.sku }}</span> {{ item.product.name }}</td>
+          <td>{{ item.warehouse.name }}</td>
+          <td class="num strong">{{ item.op.quantity }}</td>
+          <td class="muted">{{ item.op.created_at|dt }}</td>
+          <td>
+            <form method="post" action="/shipments/fbs/{{ item.op.id }}/deliver">
+              <button class="btn btn-sm btn-ghost" type="submit">Доставлено</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Нет заказов FBS в доставке.</div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>FBO в пути</h2>
+      <p class="card-sub">Покинуло ФФ, но ещё не принято маркетплейсом</p>
+    </div>
+    <span class="badge badge-info">{{ fbo_pending|length }} шт.</span>
+  </div>
+  {% if fbo_pending %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Товар</th>
+          <th>Склад-отправитель</th>
+          <th class="num">Отправлено</th>
+          <th>Дата</th>
+          <th class="accept-col">Приёмка на МП</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in fbo_pending %}
+        <tr>
+          <td><span class="sku">{{ item.product.sku }}</span> {{ item.product.name }}</td>
+          <td>{{ item.warehouse.name }}</td>
+          <td class="num strong">{{ item.op.quantity }}</td>
+          <td class="muted">{{ item.op.created_at|dt }}</td>
+          <td>
+            <form class="inline-form tight" method="post" action="/shipments/fbo/{{ item.op.id }}/receive">
+              <input type="hidden" name="idempotency_key" value="fbo-receive-{{ item.op.id }}-{{ key }}">
+              <input class="input-sm num-input" type="number" name="received_quantity" min="0" max="{{ item.op.quantity }}" step="1" value="{{ item.op.quantity }}" required aria-label="Принято маркетплейсом">
+              <button class="btn btn-sm" type="submit">Принять</button>
+            </form>
+            <div class="muted tiny">Меньше отправленного — недостача спишется.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Нет поставок FBO в пути.</div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>FBO на маркетплейсе</h2>
+      <p class="card-sub">Принято и числится на складе маркетплейса</p>
+    </div>
+    <span class="badge badge-soft">{{ fbo_mp|sum(attribute='quantity') }} ед.</span>
+  </div>
+  {% if fbo_mp %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Артикул</th><th>Товар</th><th class="num">На маркетплейсе</th></tr>
+      </thead>
+      <tbody>
+        {% for item in fbo_mp %}
+        <tr>
+          <td><span class="sku">{{ item.product.sku }}</span></td>
+          <td>{{ item.product.name }}</td>
+          <td class="num strong">{{ item.quantity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">На маркетплейсе пока нет принятого товара.</div>
+  {% endif %}
+</section>
+
+<section class="info-panel">
+  <h3>Как сходится учёт</h3>
+  <p>
+    Резерв FBS уменьшает «доступно», но не «физически». При отправке физический
+    остаток уменьшается, резерв снимается, а товар попадает в «к клиенту».
+    FBO списывает товар с ФФ в момент отправки и зачисляет на маркетплейс только
+    после приёмки. Повторное подтверждение с тем же ключом идемпотентности не
+    создаёт вторую операцию.
+  </p>
+</section>
+{% endblock %}

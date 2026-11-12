@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Движения{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Склады и движения</p>
+    <h1>Приход и перемещения</h1>
+    <p class="lead">
+      Приход сразу увеличивает остаток выбранного ФФ. Перемещение сначала
+      списывает товар со склада-отправителя и держит его «в пути» до приёмки.
+    </p>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="card form-card">
+    <div class="card-head">
+      <div>
+        <h2>Оформить приход</h2>
+        <p class="card-sub">Товар физически появился на складе</p>
+      </div>
+    </div>
+    <form method="post" action="/movements/receipt" class="stack">
+      <input type="hidden" name="idempotency_key" value="receipt-{{ key }}">
+      <label class="field">
+        <span>Товар</span>
+        <select name="product_id" required>
+          {% for product in products %}
+          <option value="{{ product.id }}">{{ product.sku }} · {{ product.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="grid-2 tight-grid">
+        <label class="field">
+          <span>Склад</span>
+          <select name="warehouse_id" required>
+            {% for warehouse in active_warehouses %}
+            <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Количество</span>
+          <input type="number" name="quantity" min="1" step="1" value="1" required>
+        </label>
+      </div>
+      <label class="field">
+        <span>Комментарий <em>необязательно</em></span>
+        <input type="text" name="note" maxlength="500" placeholder="Например, поставка №42">
+      </label>
+      <button class="btn" type="submit">Провести приход</button>
+    </form>
+  </section>
+
+  <section class="card form-card">
+    <div class="card-head">
+      <div>
+        <h2>Отправить перемещение</h2>
+        <p class="card-sub">Товар уйдёт со склада и будет числиться в пути</p>
+      </div>
+    </div>
+    <form method="post" action="/movements/transfer" class="stack">
+      <input type="hidden" name="idempotency_key" value="transfer-{{ key }}">
+      <label class="field">
+        <span>Товар</span>
+        <select name="product_id" required>
+          {% for product in products %}
+          <option value="{{ product.id }}">{{ product.sku }} · {{ product.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="grid-2 tight-grid">
+        <label class="field">
+          <span>Откуда</span>
+          <select name="from_warehouse_id" required>
+            {% for warehouse in source_warehouses %}
+            <option value="{{ warehouse.id }}">{{ warehouse.name }}{% if warehouse.is_archived %} (архив){% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Куда</span>
+          <select name="to_warehouse_id" required>
+            {% for warehouse in active_warehouses %}
+            <option value="{{ warehouse.id }}" {{ 'selected' if loop.index == 2 }}>{{ warehouse.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="grid-2 tight-grid">
+        <label class="field">
+          <span>Количество</span>
+          <input type="number" name="quantity" min="1" step="1" value="1" required>
+        </label>
+        <label class="field">
+          <span>Комментарий <em>необязательно</em></span>
+          <input type="text" name="note" maxlength="500" placeholder="Зачем перемещаем">
+        </label>
+      </div>
+      <button class="btn" type="submit">Отправить в путь</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Перемещения в пути</h2>
+      <p class="card-sub">Товар уже списан со склада-отправителя и ждёт приёмки</p>
+    </div>
+    <span class="badge badge-info">{{ pending_transfers|length }} в пути</span>
+  </div>
+
+  {% if pending_transfers %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Товар</th>
+          <th>Откуда → куда</th>
+          <th class="num">Отправлено</th>
+          <th>Дата</th>
+          <th class="accept-col">Приёмка</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in pending_transfers %}
+        <tr>
+          <td>
+            <span class="sku">{{ item.product.sku }}</span>
+            {{ item.product.name }}
+          </td>
+          <td>{{ item.source.name }} → {{ item.destination.name }}</td>
+          <td class="num strong">{{ item.op.quantity }}</td>
+          <td class="muted">{{ item.op.created_at|dt }}</td>
+          <td>
+            <form class="inline-form tight" method="post" action="/movements/transfer/{{ item.op.id }}/receive">
+              <input type="hidden" name="idempotency_key" value="receive-{{ item.op.id }}-{{ key }}">
+              <input class="input-sm num-input" type="number" name="received_quantity" min="0" max="{{ item.op.quantity }}" step="1" value="{{ item.op.quantity }}" required aria-label="Принято единиц">
+              <button class="btn btn-sm" type="submit">Принять</button>
+            </form>
+            <div class="muted tiny">Можно принять меньше — недостача спишется.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Нет перемещений в пути. Отправьте товар между складами выше.</div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Доступно сейчас</h2>
+      <p class="card-sub">С учётом резервов FBS. Отрицательных остатков быть не может</p>
+    </div>
+  </div>
+  {% if matrix and matrix_warehouses %}
+  <div class="table-wrap">
+    <table class="table matrix-table">
+      <thead>
+        <tr>
+          <th>Артикул</th>
+          {% for warehouse in matrix_warehouses %}
+          <th class="num">
+            {{ warehouse.name }}
+            {% if warehouse.is_archived %}<span class="badge badge-archive">архив</span>{% endif %}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in matrix %}
+        <tr>
+          <td><span class="sku">{{ row.product.sku }}</span> {{ row.product.name }}</td>
+          {% for cell in row.cells %}
+          <td class="num">
+            <strong>{{ cell.available }}</strong>
+            <span class="muted tiny">из {{ cell.physical }}{% if cell.reserved %} · резерв {{ cell.reserved }}{% endif %}</span>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Нет складов или товаров.</div>
+  {% endif %}
+</section>
+
+<section class="info-panel">
+  <h3>Нехватка на выбранном складе</h3>
+  <p>
+    Если на складе-отправителе не хватает единиц, операция не создаст
+    отрицательный остаток. Система покажет, сколько доступно на выбранном ФФ и
+    на других складах, — тогда товар можно сначала переместить.
+  </p>
+</section>
+{% endblock %}
